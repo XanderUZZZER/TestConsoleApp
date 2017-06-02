@@ -1,8 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
 using System.Threading;
 
 namespace TestConsoleApp
@@ -50,11 +47,10 @@ namespace TestConsoleApp
                 while (true)
                 {
                     lock (lockObject)
-                    {                        
+                    {
                         if (currentModTime != File.GetLastWriteTime(file.TextFile.FullName))
                         {
                             currentModTime = File.GetLastWriteTime(file.TextFile.FullName);
-                            Console.WriteLine("Changed");
                             FileChanged?.Invoke(file);
                         }
                     }
@@ -83,23 +79,36 @@ namespace TestConsoleApp
             }
             Console.ReadLine();
         }
-        private static readonly object lockObject = new object();
+        private static readonly object lockObject1 = new object();
+        private static readonly object lockObject2 = new object();
         private static void OnFileChanged(FileObject file)
         {
-            string content;
-            DateTime lastModTime = file.TextFile.LastWriteTime;
-            using (StreamReader reader = new StreamReader(file.TextFile.FullName))
+            ThreadPool.QueueUserWorkItem(o =>
             {
-                content = reader.ReadLine();
-            }
-            Console.WriteLine($"File content: {content}\nFile changed: {lastModTime}");
+                lock (lockObject1)
+                {
+                    string content;
+                    DateTime lastModTime = File.GetLastWriteTime(file.TextFile.FullName);
+                    using (StreamReader reader = new StreamReader(file.TextFile.FullName))
+                    {
+                        content = reader.ReadLine();
+                    }
+                    Console.WriteLine($"File content: {content}\nFile changed: {lastModTime}");
 
-            if (content == "1")
-            {
-                file.Write("0");
-                Thread.Sleep(10000);
-                Console.WriteLine("File content changed to 0 ten seconds ago");
-            }
+                    if (content == "1")
+                    {
+                        file.Write("0");
+                        ThreadPool.QueueUserWorkItem(s =>
+                            {
+                                lock (lockObject2)
+                                {
+                                    Thread.Sleep(10000);
+                                    Console.WriteLine("File content changed to 0 ten seconds ago");
+                                }
+                            });
+                    }
+                }
+            });
         }
     }
 }
