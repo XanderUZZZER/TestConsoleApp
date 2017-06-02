@@ -46,14 +46,15 @@ namespace TestConsoleApp
         {
             Thread t = new Thread(() =>
             {
-                DateTime currentModTime = file.TextFile.LastWriteTime;
+                DateTime currentModTime = File.GetLastWriteTime(file.TextFile.FullName);
                 while (true)
                 {
-                    using (StreamReader reader = new StreamReader(file.TextFile.FullName))
-                    {
-                        if (currentModTime != file.TextFile.LastWriteTime)
+                    lock (lockObject)
+                    {                        
+                        if (currentModTime != File.GetLastWriteTime(file.TextFile.FullName))
                         {
-                            currentModTime = file.TextFile.LastWriteTime;
+                            currentModTime = File.GetLastWriteTime(file.TextFile.FullName);
+                            Console.WriteLine("Changed");
                             FileChanged?.Invoke(file);
                         }
                     }
@@ -82,7 +83,7 @@ namespace TestConsoleApp
             }
             Console.ReadLine();
         }
-
+        private static readonly object lockObject = new object();
         private static void OnFileChanged(FileObject file)
         {
             string content;
@@ -91,7 +92,7 @@ namespace TestConsoleApp
             {
                 content = reader.ReadLine();
             }
-            Console.WriteLine($"File content: {content}\nFile changed: {lastModTime}/n");
+            Console.WriteLine($"File content: {content}\nFile changed: {lastModTime}");
 
             if (content == "1")
             {
@@ -101,5 +102,4 @@ namespace TestConsoleApp
             }
         }
     }
-
 }
