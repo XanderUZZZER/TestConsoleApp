@@ -16,20 +16,9 @@ namespace TestConsoleApp
             Write("0");
         }
 
-        private static readonly object lockObject = new object();
         public void Write(string s)
         {
-            ThreadPool.QueueUserWorkItem(o =>
-               {
-                   lock (lockObject)
-                   {
-                       //File.WriteAllText(TextFile.FullName, s);
-                       using (StreamWriter writer = new StreamWriter(TextFile.FullName))
-                       {
-                           writer.Write(s);
-                       }
-                   }
-               });
+            File.WriteAllText(TextFile.FullName, s);
         }
     }
     class FileWatcher
@@ -41,7 +30,7 @@ namespace TestConsoleApp
         {
             this.file = file;
         }
-        private static readonly object lockObject = new object();
+        private readonly object lockObject = new object();
         public void Start()
         {
             Thread t = new Thread(() =>
@@ -49,14 +38,19 @@ namespace TestConsoleApp
                 DateTime currentModTime = File.GetLastWriteTime(file.TextFile.FullName);
                 while (true)
                 {
-                    //lock (lockObject)
+                    DateTime latestModTime = File.GetLastWriteTime(file.TextFile.FullName);
+                    if (currentModTime != latestModTime)
                     {
-                        if (currentModTime != File.GetLastWriteTime(file.TextFile.FullName))
-                        {
-                            currentModTime = File.GetLastWriteTime(file.TextFile.FullName);
-                            FileChanged?.Invoke(file);
-                        }
+                        currentModTime = latestModTime;
+                        ThreadPool.QueueUserWorkItem(o =>
+                           {
+                               lock (lockObject)
+                               {
+                                   FileChanged?.Invoke(file);
+                               }
+                           });
                     }
+
                 }
             });
             t.Start();
@@ -85,27 +79,16 @@ namespace TestConsoleApp
         private static readonly object lockObject1 = new object();
         private static void OnFileChanged(FileObject file)
         {
-            ThreadPool.QueueUserWorkItem(o =>
-            {
-                lock (lockObject1)
-                {
-                    string content;
-                    DateTime lastModTime = File.GetLastWriteTime(file.TextFile.FullName);
-                    //string content = File.ReadAllText(file.TextFile.FullName);
-                    using (StreamReader reader = new StreamReader(file.TextFile.FullName))
-                    {
-                        content = reader.ReadLine();
-                    }
-                    Console.WriteLine($"\tFile content: {content}\n\tFile changed: {lastModTime}");
+            DateTime lastModTime = File.GetLastWriteTime(file.TextFile.FullName);
+            string content = File.ReadAllText(file.TextFile.FullName);
+            Console.WriteLine($"\tFile content: {content}\n\tFile changed: {lastModTime}");
 
-                    if (content == "1")
-                    {
-                        file.Write("0");
-                        Thread.Sleep(10000);
-                        Console.WriteLine("\t\tFile content changed to 0 ten seconds ago");
-                    }
-                }
-            });
+            if (content == "1")
+            {
+                file.Write("0");
+                Thread.Sleep(10000);
+                Console.WriteLine("\t\tFile content changed to 0 ten seconds ago");
+            }
         }
     }
 }
