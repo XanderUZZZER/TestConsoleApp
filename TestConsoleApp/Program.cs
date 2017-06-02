@@ -80,7 +80,6 @@ namespace TestConsoleApp
             Console.ReadLine();
         }
         private static readonly object lockObject1 = new object();
-        private static readonly object lockObject2 = new object();
         private static void OnFileChanged(FileObject file)
         {
             ThreadPool.QueueUserWorkItem(o =>
@@ -98,14 +97,8 @@ namespace TestConsoleApp
                     if (content == "1")
                     {
                         file.Write("0");
-                        ThreadPool.QueueUserWorkItem(s =>
-                            {
-                                lock (lockObject2)
-                                {
-                                    Thread.Sleep(10000);
-                                    Console.WriteLine("File content changed to 0 ten seconds ago");
-                                }
-                            });
+                        Thread.Sleep(10000);
+                        Console.WriteLine("File content changed to 0 ten seconds ago");
                     }
                 }
             });
