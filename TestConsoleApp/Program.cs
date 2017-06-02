@@ -11,6 +11,8 @@ namespace TestConsoleApp
         public FileObject()
         {
             TextFile = new FileInfo("test.txt");
+            //FileStream fs = TextFile.Create();
+            //fs.Close();            
             Write("0");
         }
 
@@ -21,6 +23,7 @@ namespace TestConsoleApp
                {
                    lock (lockObject)
                    {
+                       //File.WriteAllText(TextFile.FullName, s);
                        using (StreamWriter writer = new StreamWriter(TextFile.FullName))
                        {
                            writer.Write(s);
@@ -46,7 +49,7 @@ namespace TestConsoleApp
                 DateTime currentModTime = File.GetLastWriteTime(file.TextFile.FullName);
                 while (true)
                 {
-                    lock (lockObject)
+                    //lock (lockObject)
                     {
                         if (currentModTime != File.GetLastWriteTime(file.TextFile.FullName))
                         {
@@ -88,17 +91,18 @@ namespace TestConsoleApp
                 {
                     string content;
                     DateTime lastModTime = File.GetLastWriteTime(file.TextFile.FullName);
+                    //string content = File.ReadAllText(file.TextFile.FullName);
                     using (StreamReader reader = new StreamReader(file.TextFile.FullName))
                     {
                         content = reader.ReadLine();
                     }
-                    Console.WriteLine($"File content: {content}\nFile changed: {lastModTime}");
+                    Console.WriteLine($"\tFile content: {content}\n\tFile changed: {lastModTime}");
 
                     if (content == "1")
                     {
                         file.Write("0");
                         Thread.Sleep(10000);
-                        Console.WriteLine("File content changed to 0 ten seconds ago");
+                        Console.WriteLine("\t\tFile content changed to 0 ten seconds ago");
                     }
                 }
             });
