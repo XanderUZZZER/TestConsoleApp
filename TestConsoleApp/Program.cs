@@ -86,7 +86,7 @@ namespace TestConsoleApp
             if (content == "1")
             {
                 file.Write("0");
-                Thread.Sleep(10000);
+                Thread.Sleep(4000);
                 Console.WriteLine("\t\tFile content changed to 0 ten seconds ago");
             }
         }
