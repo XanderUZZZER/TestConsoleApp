@@ -7,19 +7,38 @@ namespace TestConsoleApp
     class FileObject
     {
         public FileInfo TextFile { get; set; }
+        public string Content { get; set; }
+        private readonly object lockObject = new object();
 
         public FileObject()
         {
             TextFile = new FileInfo("test.txt");
-            //FileStream fs = TextFile.Create();
-            //fs.Close();            
             Write("0");
+            Content = this.Read();
         }
 
         public void Write(string s)
         {
-            File.WriteAllText(TextFile.FullName, s);
+            ThreadPool.QueueUserWorkItem(o =>
+            {
+                lock(lockObject)
+                {
+                    File.WriteAllText(TextFile.FullName, s);
+                }                
+            });            
         }
+        public string Read()
+        {
+            ThreadPool.QueueUserWorkItem(o =>
+            {
+                lock (lockObject)
+                {
+                    Content = File.ReadAllText(TextFile.FullName);
+                }
+            });//, (object)Content);
+            return Content;
+        }
+
     }
     class FileWatcher
     {
@@ -50,7 +69,6 @@ namespace TestConsoleApp
                                }
                            });
                     }
-
                 }
             });
             t.Start();
@@ -76,11 +94,11 @@ namespace TestConsoleApp
             }
             Console.ReadLine();
         }
-        private static readonly object lockObject1 = new object();
+        
         private static void OnFileChanged(FileObject file)
         {
-            DateTime lastModTime = File.GetLastWriteTime(file.TextFile.FullName);
-            string content = File.ReadAllText(file.TextFile.FullName);
+            string content = file.Read();
+            DateTime lastModTime = File.GetLastWriteTime(file.TextFile.FullName);            
             Console.WriteLine($"\tFile content: {content}\n\tFile changed: {lastModTime}");
 
             if (content == "1")
